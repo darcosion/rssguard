@@ -77,18 +77,36 @@ void ThreadPreviewer::fetchComments() {
 
   auto* specific_feed = qobject_cast<RedditSubscription*>(general_feed);
   auto subreddit = m_account->network()->prefixedSubredditToBare(specific_feed->prefixedName());
-  auto cmnts = m_account->network()->commentsTree(subreddit, m_message.m_customId, m_account->networkProxy());
 
-  m_message.m_customData =
-    QString::fromUtf8(QJsonDocument(RedditComment::toJson(cmnts)).toJson(QJsonDocument::JsonFormat::Compact));
+  FormProgressWorker wrkr(qApp->mainFormWidget());
 
-  loadMessage(m_message, m_selectedItem);
+  auto res = wrkr.doSingleWork(
+    tr("Fetching comments"),
+    false,
+    [&](QFutureWatcher<void>& rprt) {
+      auto cmnts = m_account->network()->commentsTree(subreddit, m_message.m_customId, m_account->networkProxy());
+
+      m_message.m_customData =
+        QString::fromUtf8(QJsonDocument(RedditComment::toJson(cmnts)).toJson(QJsonDocument::JsonFormat::Compact));
+    },
+    [this](int progress) {
+      Q_UNUSED(progress)
+      return tr("Fetching comments for '%1'...").arg(m_message.m_title);
+    });
+
+  if (res == QDialog::DialogCode::Accepted) {
+    loadMessage(m_message, m_selectedItem);
+  }
 }
 
 ThreadWebBrowser::ThreadWebBrowser(WebViewer* viewer, QWidget* parent) : WebBrowser(viewer, parent) {}
 
 ThreadWebBrowser::~ThreadWebBrowser() {}
 
-void ThreadWebBrowser::onLinkMouseHighlighted(const QUrl& url) {}
+void ThreadWebBrowser::onLinkMouseHighlighted(const QUrl& url) {
+  WebBrowser::onLinkMouseHighlighted(url);
+}
 
-void ThreadWebBrowser::onLinkMouseClicked(const QUrl& url) {}
+void ThreadWebBrowser::onLinkMouseClicked(const QUrl& url) {
+  WebBrowser::onLinkMouseClicked(url);
+}

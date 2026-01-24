@@ -254,12 +254,12 @@ QList<Label*> DatabaseQueries::getLabelsForAccount(const QSqlDatabase& db, int a
 void DatabaseQueries::updateLabel(const QSqlDatabase& db, Label* label) {
   SqlQuery q(db);
 
-  q.prepare(QSL("UPDATE Labels SET name = :name, color = :color "
-                "WHERE id = :id AND account_id = :account_id;"));
+  q.prepare(QSL("UPDATE Labels "
+                "SET name = :name, color = :color "
+                "WHERE id = :id;"));
   q.bindValue(QSL(":name"), label->title());
   q.bindValue(QSL(":color"), label->color().name());
   q.bindValue(QSL(":id"), label->id());
-  q.bindValue(QSL(":account_id"), label->account()->accountId());
 
   q.exec();
 }
@@ -269,9 +269,8 @@ void DatabaseQueries::deleteLabel(const QSqlDatabase& db, Label* label) {
 
   SqlQuery q(db);
 
-  q.prepare(QSL("DELETE FROM Labels WHERE id = :id AND account_id = :account_id;"));
+  q.prepare(QSL("DELETE FROM Labels WHERE id = :id;"));
   q.bindValue(QSL(":id"), label->id());
-  q.bindValue(QSL(":account_id"), label->account()->accountId());
 
   q.exec();
 }
@@ -1488,6 +1487,20 @@ void DatabaseQueries::storeAccountTree(const QSqlDatabase& db,
       }
     }
   }
+}
+
+QStringList DatabaseQueries::customIdsOfMessagesFromLabels(const QSqlDatabase& db,
+                                                           RootItem::ReadStatus target_read,
+                                                           int account_id) {
+  QString cond = whereClauseLabel(0, account_id);
+  QMap<QString, QVariant> bindings;
+
+  if (target_read != RootItem::ReadStatus::Unknown) {
+    cond += QSL(" AND Messages.is_read = :read");
+    bindings[QSL(":read")] = target_read == RootItem::ReadStatus::Read ? 0 : 1;
+  }
+
+  return customIdsOfMessagesByCondition(db, cond, bindings);
 }
 
 QStringList DatabaseQueries::customIdsOfMessagesFromLabel(const QSqlDatabase& db,

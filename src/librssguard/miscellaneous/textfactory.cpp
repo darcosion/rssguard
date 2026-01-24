@@ -464,6 +464,10 @@ QString TextFactory::shorten(const QString& input, int text_length_limit) {
 =======
 >>>>>>> e41f7828f (fix divers)
 QString TextFactory::fromEncoding(const QByteArray& data, const QString& encoding) {
+  if (encoding.isEmpty()) {
+    return QString::fromUtf8(data);
+  }
+
 #if defined(HAS_ICU)
   UErrorCode status = U_ZERO_ERROR;
   QByteArray enc = encoding.toUtf8();
@@ -495,7 +499,9 @@ QString TextFactory::fromEncoding(const QByteArray& data, const QString& encodin
   return decoder.decode(data);
 >>>>>>> e41f7828f (fix divers)
 #else
-  auto decoder = QStringDecoder(encoding);
+  auto c_encoding_ascii = encoding.toLocal8Bit();
+  auto c_encoding = c_encoding_ascii.constData();
+  auto decoder = QStringDecoder(c_encoding);
   return decoder.decode(data);
 #endif
 }
@@ -536,7 +542,9 @@ QByteArray TextFactory::toEncoding(const QString& str, const QString& encoding) 
   return encoder.encode(str);
 >>>>>>> e41f7828f (fix divers)
 #else
-  auto encoder = QStringEncoder(encoding);
+  auto c_encoding_ascii = encoding.toLocal8Bit();
+  auto c_encoding = c_encoding_ascii.constData();
+  auto encoder = QStringEncoder(c_encoding);
   return encoder.encode(str);
 #endif
 }
